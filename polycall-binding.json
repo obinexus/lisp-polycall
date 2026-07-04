@@ -1,11 +1,13 @@
 {
   "name": "lisp-polycall",
+  "package": "@obinexusltd/lisp-polycall",
   "version": "1.5.0",
-  "language": "Lisp",
+  "language": "Common Lisp",
   "adapter": true,
   "ffi": true,
+  "entry_point": "polycall_ffi_run_config",
   "config": "lisp-polycallrc",
   "core": "../../src",
-  "license": "MIT OBINexus",
+  "license": "MIT",
   "author": "Nnamdi Michael Okpala"
 }

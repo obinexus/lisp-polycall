@@ -1,8 +1,7 @@
-# Lisp adapter (scaffold)
+# Common Lisp adapter
 
-Implement the Lisp adapter here. It must call across the FFI boundary only:
+The public API and CFFI declaration are in `lisp-polycall.lisp`. The native
+adapter exports `lisp_polycall_run_config`, which forwards to
+`polycall_ffi_run_config(config_path, 1)` and returns the status unchanged.
 
-    status = polycall_ffi_run_config("lisp-polycallrc", /*run=*/1)
-
-Return/raise a Lisp-native error when `status` is non-zero. Do not parse
-config or duplicate any core logic. See ../../../docs/adapter-pattern.md.
+No configuration parsing or runtime policy belongs in this binding.

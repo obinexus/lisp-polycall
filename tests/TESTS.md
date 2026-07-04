@@ -1,4 +1,5 @@
-# Lisp tests (scaffold)
+# Common Lisp tests
 
-Add a smoke test that loads `../lisp-polycallrc`, calls the adapter, and asserts a
-zero status. Mirror the reference bindings (pypolycall / rust-polycall).
+`npm test` runs the native forwarding test, source audit, ASDF metadata check,
+and npm package test. `npm run test:lisp` additionally loads the ASDF test
+system through SBCL and calls the mock shared library through CFFI.

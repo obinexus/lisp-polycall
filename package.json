@@ -1,0 +1,59 @@
+{
+  "name": "@obinexusltd/lisp-polycall",
+  "version": "1.0.0",
+  "description": "Common Lisp CFFI source binding for libpolycall 1.5",
+  "main": "index.js",
+  "type": "commonjs",
+  "files": [
+    "index.js",
+    "lisp-polycall.asd",
+    "src/",
+    "include/",
+    "generated/",
+    "examples/",
+    "tests/",
+    "scripts/",
+    "Makefile",
+    "lisp-polycallrc",
+    "polycall-binding.json",
+    "README.md",
+    "TODO.md",
+    "LICENSE"
+  ],
+  "directories": {
+    "lib": "src",
+    "example": "examples",
+    "test": "tests"
+  },
+  "scripts": {
+    "build": "make",
+    "build:native": "make native",
+    "test": "make test && npm run verify:dry && npm run test:package",
+    "test:lisp": "make test-lisp",
+    "test:package": "node tests/package.test.js",
+    "verify:dry": "make verify-dry",
+    "verify": "npm test",
+    "prepack": "npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/obinexus/lisp-polycall.git"
+  },
+  "keywords": [
+    "libpolycall",
+    "polycall",
+    "common-lisp",
+    "cffi",
+    "asdf",
+    "ffi"
+  ],
+  "author": "Nnamdi Michael Okpala <okpalan@protonmail.com>",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "bugs": {
+    "url": "https://github.com/obinexus/lisp-polycall/issues"
+  },
+  "homepage": "https://github.com/obinexus/lisp-polycall#readme"
+}
