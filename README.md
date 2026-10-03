@@ -17,6 +17,15 @@ the peer transport stay in the core.
 - the Polycall core >= 1.1.0 installed (`libpolycall.so.1`, `polycall.dll` /
   `libpolycall.dll`, or `libpolycall.1.dylib`)
 
+Tested: Linux x86_64 (Debian 13, SBCL 2.5.2, CFFI 0.24.1). The loader names
+the Windows and macOS libraries, but neither platform has been tested (no SBCL
+on the Windows QA host, no macOS host).
+
+Install it like any ASDF system: put the checkout (or the unpacked npm
+package) where ASDF looks — `~/common-lisp/`, a Quicklisp `local-projects/`
+directory, or `CL_SOURCE_REGISTRY=/path/to/lisp-polycall/:` — then
+`(asdf:load-system "lisp-polycall")`.
+
 ## Loading the library
 
 `(lisp-polycall:load-library)` (called implicitly on first use) tries the
@@ -30,8 +39,7 @@ library and the problem.
 ## API
 
 ```lisp
-(asdf:load-asd #p"/path/to/lisp-polycall/lisp-polycall.asd")
-(asdf:load-system "lisp-polycall")
+(asdf:load-system "lisp-polycall")       ; or (asdf:load-asd #p"/path/to/lisp-polycall/lisp-polycall.asd") first
 (use-package :lisp-polycall)
 
 (abi-version)                              ; => 1
@@ -59,20 +67,27 @@ Failures signal `polycall-error` with `polycall-error-status` (the
 thread) and `polycall-error-output` (the remote error object of a failed
 `polycall-call`, or the needed size of a `peer-recv` whose `:capacity` was too
 small — the message stays queued). A `peer-recv` blocked in one thread is woken
-by `peer-cancel` or `peer-close` from another.
+by `peer-cancel` or `peer-close` from another. Strings (paths, ids, endpoints,
+JSON) cross as UTF-8; payloads are octet vectors (a string is sent UTF-8
+encoded). Out-of-range timeouts signal `+e-invalid-argument+` before any call.
 
 ## Tests
 
-`tests/run-real-core.sh` loads the ASDF system in SBCL and runs
-`tests/real-core.lisp` against the **real installed core**: version/ABI, a
-missing library, an old core and an ABI 2 core (child SBCL processes),
-`run-config`, `polycall-call` against a live `polycall start` runtime, two
-nodes both directions, payload matrix (empty, UTF-8, binary + NUL, 1 MiB,
-1 MiB + 1), registry ownership, de-duplication, auth, dead peers, timeouts,
-small buffers, cancel and close waking blocked receivers (threads), handle
-lifecycle, 8 concurrent sender threads, and interop with a
-`polycall peer serve` C node. A missing SBCL, CFFI or core is reported as SKIP
-(exit 77), never as success.
+`tests/run-real-core.sh` registers the checkout through `CL_SOURCE_REGISTRY`
+(as an installed system is found), loads `lisp-polycall/tests` in SBCL and
+runs `tests/real-core.lisp` against the **real installed core**: version/ABI,
+a missing library, an old core and an ABI 2 core (child SBCL processes),
+`run-config` (valid, missing, invalid, strict, TLS, non-ASCII path),
+`polycall-call` against a live `polycall start` runtime and a
+`polycall daemon`, timeout boundaries, two nodes both directions, payload
+matrix (empty, UTF-8, binary + NUL, 1 MiB, 1 MiB + 1), registry ownership,
+de-duplication, auth, dead peers, timeouts, small buffers, cancel and close
+waking blocked receivers (threads), handle lifecycle, 8 concurrent sender
+threads, and interop with a `polycall peer serve` C node. A missing SBCL,
+CFFI or core, or any skipped test, is reported as SKIP (exit 77), never as
+success. `LISP_POLYCALL_SOURCE_DIR` runs the suite on another copy (e.g. the
+unpacked npm package); `(asdf:test-system "lisp-polycall")` signals an error
+unless every test ran and passed (it needs the environment the runner sets up).
 
 ```sh
 sh tests/run-real-core.sh     # core in /opt/polycall, or POLYCALL_PREFIX / POLYCALL_LIBRARY
