@@ -4,7 +4,7 @@ Common Lisp binding for the [Polycall](https://github.com/obinexus/polycall)
 core's **binding ABI v1** (`polycall.h`, libpolycall >= 1.1.0) through
 [CFFI](https://cffi.common-lisp.dev/): configuration validation,
 `polycall_rpc` calls and peer-to-peer nodes. ASDF system `lisp-polycall`;
-npm source distribution `@obinexusltd/lisp-polycall` (not published yet).
+npm source distribution `lisp-polycall` (not published yet).
 
 CFFI calls libpolycall directly with the exact signatures from `polycall.h`
 (there is no C shim to build). Configuration parsing, the wire protocols and

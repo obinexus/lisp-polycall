@@ -13,7 +13,7 @@ const manifest = require('../polycall-binding.json');
 
 const repo = 'https://github.com/obinexus/lisp-polycall';
 
-assert.equal(metadata.name, '@obinexusltd/lisp-polycall');
+assert.equal(metadata.name, 'lisp-polycall');
 assert.equal(metadata.license, 'MIT');
 assert.equal(metadata.publishConfig.access, 'public');
 assert.equal(metadata.repository.url, `git+${repo}.git`);

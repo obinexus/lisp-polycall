@@ -1,6 +1,6 @@
 {
   "name": "lisp-polycall",
-  "package": "@obinexusltd/lisp-polycall",
+  "package": "lisp-polycall",
   "version": "1.1.0",
   "language": "Common Lisp",
   "adapter": true,

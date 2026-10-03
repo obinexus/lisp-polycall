@@ -10,6 +10,6 @@ Status: Common Lisp/CFFI binding over the Polycall binding ABI v1 (libpolycall >
 - [x] Real-core suite in SBCL 2.5.2 (Debian 13) incl. interop with the C CLI peer, `polycall daemon`, non-ASCII paths, loaded through CL_SOURCE_REGISTRY
 - [ ] Run the suite on other implementations (CCL, ECL) -- the threaded tests use sb-thread
 - [ ] Windows run (no SBCL on the QA host); macOS run (no macOS host)
-- [ ] Publish `@obinexusltd/lisp-polycall` / submit to Quicklisp
+- [ ] Publish `lisp-polycall` / submit to Quicklisp
 
 Do not add configuration parsing or runtime policy here; adapt the core only.
