@@ -1,11 +1,13 @@
 ;;;; lisp-polycall real-core tests (SBCL). Run through tests/run-real-core.sh,
-;;;; which starts a `polycall start` runtime and exports POLYCALL_* test
-;;;; variables. A test whose prerequisites are missing is SKIPPED, never
-;;;; counted as passed. Prints PASS/FAIL/SKIP per test; exit 1 on any FAIL.
+;;;; which starts a `polycall start` runtime and a `polycall daemon` and
+;;;; exports POLYCALL_* test variables. A test whose prerequisites are missing
+;;;; is SKIPPED, never counted as passed. Prints PASS/FAIL/SKIP per test;
+;;;; RUN-TESTS-AND-EXIT exits 1 on any FAIL, 77 when a test was SKIPPED and 0
+;;;; only when every test ran and passed.
 
 (defpackage #:lisp-polycall/tests
   (:use #:cl #:lisp-polycall)
-  (:export #:run-tests #:run-tests-and-exit))
+  (:export #:run-tests #:run-tests-and-exit #:run-tests-or-error))
 
 (in-package #:lisp-polycall/tests)
 
@@ -54,9 +56,20 @@
     (values pass fail skipped)))
 
 (defun run-tests-and-exit ()
-  (multiple-value-bind (pass fail) (run-tests)
+  (multiple-value-bind (pass fail skipped) (run-tests)
     (declare (ignore pass))
-    (uiop:quit (if (zerop fail) 0 1))))
+    (cond ((plusp fail) (uiop:quit 1))
+          ((plusp skipped)
+           (format t "lisp-polycall: SKIPPED -- ~D test(s) did not run; not a pass~%" skipped)
+           (uiop:quit 77))
+          (t (uiop:quit 0)))))
+
+(defun run-tests-or-error ()
+  "For ASDF:TEST-SYSTEM: signal an error unless every test ran and passed."
+  (multiple-value-bind (pass fail skipped) (run-tests)
+    (declare (ignore pass))
+    (unless (and (zerop fail) (zerop skipped))
+      (error "lisp-polycall tests: ~D failed, ~D skipped" fail skipped))))
 
 ;;; ---- helpers ---------------------------------------------------------------------
 
@@ -130,7 +143,9 @@
     (is (and (>= (length v) 5) (string= "1." (subseq v 0 2))) v)
     (is (>= (parse-integer v :start 2 :junk-allowed t) 1)))
   (is (string= (namestring (truename (env "POLYCALL_LIBRARY"))) (namestring (truename (library-path))))
-      "POLYCALL_LIBRARY is honoured first"))
+      "POLYCALL_LIBRARY is honoured first")
+  (is (equal (truename (env "LISP_POLYCALL_ASD")) (truename (asdf:system-source-file "lisp-polycall")))
+      "ASDF found the system under test through CL_SOURCE_REGISTRY"))
 
 (deftest strerror-names-every-status
   (let ((names (loop for s from 0 downto -18
@@ -211,6 +226,27 @@
     (is-equal +e-unsupported+ (run-config p t))
     (is (search "tls" (string-downcase (last-error))))))
 
+(deftest non-ascii-config-path
+  ;; the path is passed to the core as UTF-8; SBCL names the files with the
+  ;; locale's (UTF-8) external format
+  (let* ((dir (format nil "~A/cfg-~C~C~C-~C~C-~C-~C/" (env "POLYCALL_TEST_TMP")
+                      (code-char #xfc) (code-char #xf1) (code-char #xee)
+                      (code-char #x65e5) (code-char #x672c) (code-char #x436) (code-char #x1f30d)))
+         (good (format nil "~Alisp-polycallrc-~C" dir (code-char #xe9)))
+         (bad (format nil "~Abad-~C" dir (code-char #xe9))))
+    (ensure-directories-exist dir)
+    (with-open-file (s good :direction :output :if-exists :supersede :external-format :utf-8)
+      (format s "log_level=info~%max_connections=8~%"))
+    (with-open-file (s bad :direction :output :if-exists :supersede :external-format :utf-8)
+      (format s "max_connections=lots~%"))
+    (is (probe-file good))
+    (is-equal 0 (run-config good))
+    (is-equal nil (run-config-or-error good t))
+    (is (search "\"layer\"" (describe-config good)))
+    (is-equal +e-config+ (run-config bad nil) "the invalid file was really read")
+    (is (search "max_connections" (last-error)))
+    (is-equal +e-not-found+ (run-config (format nil "~Amissing-~C" dir (code-char #xe9))))))
+
 ;;; ---- polycall_call ---------------------------------------------------------------------------
 
 (deftest call-success
@@ -244,6 +280,26 @@
 
 (deftest call-no-runtime
   (is-equal +e-transport+ (status-of (polycall-call "127.0.0.1:1" "inventory" "get" :input "{}" :timeout-ms 1000))))
+
+(deftest call-against-polycall-daemon
+  (let ((ep (env "POLYCALL_TEST_DAEMON_ENDPOINT")))
+    (is-equal "{\"item_id\":\"widget-a\",\"quantity\":42,\"in_stock\":true}"
+              (polycall-call ep "inventory" "get" :input "{\"item_id\":\"widget-a\"}" :timeout-ms 2000))
+    (is-equal +e-not-found+ (status-of (polycall-call ep "inventory" "teleport" :input "{}" :timeout-ms 2000)))
+    (let ((c (condition-of (polycall-call ep "inventory" "get" :input "{\"item_id\":\"nope\"}" :timeout-ms 2000))))
+      (is-equal +e-remote+ (polycall-error-status c))
+      (is (search "item.unknown" (polycall-error-output c))))))
+
+(deftest timeout-boundaries
+  (let ((ep (env "POLYCALL_TEST_RPC_ENDPOINT")))
+    (is-equal "{\"echo\":null}" (polycall-call ep "debug" "echo" :timeout-ms 600000) "largest call timeout")
+    (is-equal +e-invalid-argument+ (status-of (polycall-call ep "debug" "echo" :timeout-ms 600001)))
+    (is-equal +e-invalid-argument+ (status-of (polycall-call ep "debug" "echo" :timeout-ms 0))))
+  (with-peers ((b "beta"))
+    ;; the uint32 range is checked in Lisp before the call (no wrap-around)
+    (is-equal +e-invalid-argument+ (status-of (peer-recv b :timeout-ms -1)))
+    (is-equal +e-invalid-argument+ (status-of (peer-recv b :timeout-ms (1+ +wait-forever+))))
+    (is-equal +e-timeout+ (status-of (peer-recv b :timeout-ms 1)))))
 
 ;;; ---- peers ----------------------------------------------------------------------------------------
 

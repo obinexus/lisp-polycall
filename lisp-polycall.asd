@@ -13,9 +13,9 @@
   :in-order-to ((asdf:test-op (asdf:test-op "lisp-polycall/tests"))))
 
 (asdf:defsystem "lisp-polycall/tests"
-  :description "Real-core tests (run through tests/run-real-core.sh)"
+  :description "Real-core tests (run through tests/run-real-core.sh, which sets up the core)"
   :depends-on ("lisp-polycall" "uiop")
   :serial t
   :components ((:file "tests/real-core"))
   :perform (asdf:test-op (o c)
-             (uiop:symbol-call '#:lisp-polycall/tests '#:run-tests-and-exit)))
+             (uiop:symbol-call '#:lisp-polycall/tests '#:run-tests-or-error)))
