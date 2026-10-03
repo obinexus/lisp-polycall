@@ -1,116 +1,84 @@
-# @obinexusltd/lisp-polycall
+# lisp-polycall
 
-Common Lisp CFFI binding for
-[libpolycall](https://github.com/obinexus/libpolycall) 1.5. The adapter maps
-Lisp calls to the single core entry point:
+Common Lisp binding for the [Polycall](https://github.com/obinexus/polycall)
+core's **binding ABI v1** (`polycall.h`, libpolycall >= 1.1.0) through
+[CFFI](https://cffi.common-lisp.dev/): configuration validation,
+`polycall_rpc` calls and peer-to-peer nodes. ASDF system `lisp-polycall`;
+npm source distribution `@obinexusltd/lisp-polycall` (not published yet).
 
-```c
-polycall_ffi_run_config(config_path, 1)
-```
-
-Configuration parsing, validation, networking, and runtime policy remain in
-libpolycall. This package only marshals a UTF-8 configuration path and returns
-the core status unchanged.
-
-## Install the source package
-
-```shell
-npm install @obinexusltd/lisp-polycall
-```
-
-The npm package publishes the complete ASDF system, Common Lisp sources,
-native adapter, headers, configuration, examples, and tests. Calling
-`require('@obinexusltd/lisp-polycall')` returns absolute paths to the packaged
-files.
+CFFI calls libpolycall directly with the exact signatures from `polycall.h`
+(there is no C shim to build). Configuration parsing, the wire protocols and
+the peer transport stay in the core.
 
 ## Requirements
 
-- an ANSI Common Lisp implementation such as SBCL
-- ASDF and [CFFI](https://cffi.common-lisp.dev/)
-- libpolycall 1.5 development library and headers
-- a C11 compiler and GNU Make
+- SBCL (tested: 2.5.2 on Debian 13; threads are used for blocking receives)
+  with ASDF, CFFI, babel and UIOP (Debian: `sbcl cl-cffi`; or Quicklisp)
+- the Polycall core >= 1.1.0 installed (`libpolycall.so.1`, `polycall.dll` /
+  `libpolycall.dll`, or `libpolycall.1.dylib`)
 
-## Build
+## Loading the library
 
-Build the standalone adapter archive without linking libpolycall:
-
-```shell
-make
-```
-
-Build the shared CFFI library by supplying the linker flags for libpolycall:
-
-```shell
-export POLYCALL_LDFLAGS='-L/path/to/lib -lpolycall'
-make native
-```
-
-PowerShell uses the same variable:
-
-```powershell
-$env:POLYCALL_LDFLAGS = '-LC:\path\to\lib -lpolycall'
-make native
-```
-
-Add this checkout to ASDF's source registry and load the system:
-
-```lisp
-(ql:quickload :cffi)
-(asdf:load-asd #p"/path/to/lisp-polycall/lisp-polycall.asd")
-(asdf:load-system "lisp-polycall")
-```
-
-Place the native library on the platform search path, or load it explicitly:
-
-```lisp
-(lisp-polycall:load-library #p"/absolute/path/to/liblisp_polycall.so")
-```
+`(lisp-polycall:load-library)` (called implicitly on first use) tries the
+explicit pathname, then `POLYCALL_LIBRARY` (a path that does not exist is an
+error), then the platform name through the OS loader search path. No package
+or parent directory is searched. Every symbol is resolved up front: a missing
+library, an old 1.0 core without the ABI v1 symbols, or
+`polycall_ffi_abi_version() /= 1` signals `polycall-library-error` naming the
+library and the problem.
 
 ## API
 
 ```lisp
-(lisp-polycall:run-config "lisp-polycallrc")
-(lisp-polycall:run-config-or-error "lisp-polycallrc")
+(asdf:load-asd #p"/path/to/lisp-polycall/lisp-polycall.asd")
+(asdf:load-system "lisp-polycall")
+(use-package :lisp-polycall)
+
+(abi-version)                              ; => 1
+(polycall-version)                         ; => "1.1.0"
+(run-config "lisp-polycallrc")             ; => 0, or the raw status: polycall_ffi_run_config(path, 1)
+(run-config "lisp-polycallrc" nil)         ; run=0: unknown keys are warnings
+(run-config-or-error "lisp-polycallrc")    ; signals POLYCALL-ERROR
+(describe-config "lisp-polycallrc")        ; JSON
+
+;; one polycall_rpc round trip to `polycall start` / `polycall daemon start`
+(polycall-call "127.0.0.1:8084" "inventory" "get" :input "{\"item_id\":\"widget-a\"}" :timeout-ms 2000)
+
+(with-peer (alpha "alpha" :bind "127.0.0.1:0" :token (uiop:getenv "POLYCALL_DEV_TOKEN"))
+  (peer-register alpha "beta" "127.0.0.1:9002")
+  (peer-send alpha "beta" "hello" :message-id "msg-1" :timeout-ms 5000) ; string -> UTF-8, or an octet vector
+  (let ((m (peer-recv alpha :timeout-ms 5000)))                        ; or :infinite
+    (values (message-sender m) (message-id m) (message-payload m)))     ; payload: (vector (unsigned-byte 8))
+  (peer-ping alpha "beta") (peer-list alpha) (peer-health alpha)
+  (peer-endpoint alpha) (peer-node-id alpha) (peer-unregister alpha "beta") (peer-cancel alpha))
 ```
 
-- `run-config` returns the exact libpolycall status.
-- `run-config-or-error` signals `polycall-error` for a non-zero status.
-- Omitting the path uses `lisp-polycallrc`.
-- `polycall-error-status` and `polycall-error-config-path` expose condition data.
+Failures signal `polycall-error` with `polycall-error-status` (the
+`POLYCALL_E_*` code, constants `+e-timeout+` ...), `polycall-error-name` (from
+`polycall_strerror`), `polycall-error-detail` (`polycall_last_error` of this
+thread) and `polycall-error-output` (the remote error object of a failed
+`polycall-call`, or the needed size of a `peer-recv` whose `:capacity` was too
+small — the message stays queued). A `peer-recv` blocked in one thread is woken
+by `peer-cancel` or `peer-close` from another.
 
-See [`examples/basic.lisp`](examples/basic.lisp) for a runnable example.
+## Tests
 
-## Verification
+`tests/run-real-core.sh` loads the ASDF system in SBCL and runs
+`tests/real-core.lisp` against the **real installed core**: version/ABI, a
+missing library, an old core and an ABI 2 core (child SBCL processes),
+`run-config`, `polycall-call` against a live `polycall start` runtime, two
+nodes both directions, payload matrix (empty, UTF-8, binary + NUL, 1 MiB,
+1 MiB + 1), registry ownership, de-duplication, auth, dead peers, timeouts,
+small buffers, cancel and close waking blocked receivers (threads), handle
+lifecycle, 8 concurrent sender threads, and interop with a
+`polycall peer serve` C node. A missing SBCL, CFFI or core is reported as SKIP
+(exit 77), never as success.
 
-The default suite needs only a C compiler, Make, Node.js, and PowerShell on
-Windows:
-
-```shell
-npm test
+```sh
+sh tests/run-real-core.sh     # core in /opt/polycall, or POLYCALL_PREFIX / POLYCALL_LIBRARY
 ```
 
-It verifies exact path forwarding, the required validation flag, status
-propagation, thin-adapter constraints, ASDF metadata, and npm package
-completeness.
+## License
 
-With SBCL, ASDF, and CFFI installed, run the end-to-end smoke test:
-
-```shell
-npm run test:lisp
-```
-
-## Package layout
-
-- `lisp-polycall.asd` — ASDF system and test system
-- `src/*.lisp` — public Common Lisp API and CFFI definitions
-- `src/lisp_polycall.c` — native forwarding adapter
-- `include/` — adapter C header
-- `generated/polycall/` — minimal generated core FFI declaration
-- `examples/` and `tests/` — usage and verification
-
-## Author and license
-
-Copyright © 2026 Nnamdi Michael Okpala
-<okpalan@protonmail.com>.
-
-Released under the [MIT License](LICENSE).
+Copyright © 2026 Nnamdi Michael Okpala <okpalan@protonmail.com>. Released under
+the [MIT License](LICENSE).

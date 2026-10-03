@@ -1,15 +1,15 @@
 # TODO — lisp-polycall
 
-Status: implemented thin Common Lisp/CFFI adapter for libpolycall 1.5.
+Status: Common Lisp/CFFI binding over the Polycall binding ABI v1 (libpolycall >= 1.1.0).
 
-- [x] Publishable `@obinexusltd/lisp-polycall` npm source package
-- [x] ASDF system with CFFI dependency
-- [x] Raw-status API and typed `polycall-error` condition
-- [x] UTF-8 string marshalling and explicit library loader
-- [x] Exact `polycall_ffi_run_config(config_path, 1)` forwarding
-- [x] Native forwarding test and Common Lisp smoke test
-- [x] Thin-adapter source audit for Windows and POSIX shells
-- [ ] Exercise the CFFI smoke test in release CI across Lisp implementations
-- [ ] Publish signed platform-native artifacts
+- [x] CFFI declarations of every `polycall.h` ABI v1 function; no C shim
+- [x] Loader: `POLYCALL_LIBRARY`, then platform names; symbols resolved up front;
+      clear `polycall-library-error` for a missing library, an old core, ABI /= 1
+- [x] `run-config` keeps `polycall_ffi_run_config(path, 1)`; `polycall-call`; peers
+- [x] `polycall-error` with status, `polycall_strerror` name, `polycall_last_error`
+- [x] Real-core suite in SBCL 2.5.2 (Debian 13) incl. interop with the C CLI peer
+- [ ] Run the suite on other implementations (CCL, ECL) -- the threaded tests use sb-thread
+- [ ] Windows run (no SBCL on the QA host)
+- [ ] Publish `@obinexusltd/lisp-polycall` / submit to Quicklisp
 
 Do not add configuration parsing or runtime policy here; adapt the core only.

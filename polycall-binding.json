@@ -1,13 +1,17 @@
 {
   "name": "lisp-polycall",
   "package": "@obinexusltd/lisp-polycall",
-  "version": "1.5.0",
+  "version": "1.1.0",
   "language": "Common Lisp",
   "adapter": true,
   "ffi": true,
+  "asdf_system": "lisp-polycall.asd",
   "entry_point": "polycall_ffi_run_config",
+  "abi": 1,
   "config": "lisp-polycallrc",
-  "core": "../../src",
+  "core": "polycall >= 1.1.0 (binding ABI 1)",
+  "core_repository": "https://github.com/obinexus/polycall",
+  "repository": "https://github.com/obinexus/lisp-polycall",
   "license": "MIT",
-  "author": "Nnamdi Michael Okpala"
+  "author": "Nnamdi Michael Okpala <okpalan@protonmail.com>"
 }

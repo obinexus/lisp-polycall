@@ -1,18 +1,15 @@
 {
   "name": "@obinexusltd/lisp-polycall",
-  "version": "1.0.0",
-  "description": "Common Lisp CFFI source binding for libpolycall 1.5",
+  "version": "1.1.0",
+  "description": "Common Lisp (CFFI) binding for the Polycall binding ABI v1 (libpolycall >= 1.1.0): config validation, RPC calls and peer nodes",
   "main": "index.js",
   "type": "commonjs",
   "files": [
     "index.js",
     "lisp-polycall.asd",
     "src/",
-    "include/",
-    "generated/",
     "examples/",
     "tests/",
-    "scripts/",
     "Makefile",
     "lisp-polycallrc",
     "polycall-binding.json",
@@ -26,29 +23,28 @@
     "test": "tests"
   },
   "scripts": {
-    "build": "make",
-    "build:native": "make native",
-    "test": "make test && npm run verify:dry && npm run test:package",
-    "test:lisp": "make test-lisp",
+    "test": "node tests/package.test.js && sh tests/run-real-core.sh",
     "test:package": "node tests/package.test.js",
-    "verify:dry": "make verify-dry",
-    "verify": "npm test",
-    "prepack": "npm test"
+    "test:lisp": "sh tests/run-real-core.sh",
+    "prepack": "node tests/package.test.js"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/obinexus/lisp-polycall.git"
   },
   "keywords": [
-    "libpolycall",
     "polycall",
+    "libpolycall",
     "common-lisp",
     "cffi",
     "asdf",
-    "ffi"
+    "peer-to-peer"
   ],
   "author": "Nnamdi Michael Okpala <okpalan@protonmail.com>",
   "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
   "publishConfig": {
     "access": "public"
   },

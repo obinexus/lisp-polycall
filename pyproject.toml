@@ -1,0 +1,15 @@
+# QA descriptor for the Polycall binding matrix (read by polycall/qa/run_qa.py).
+# This repository is NOT a Python package and is not pip-installable;
+# its native manifest is lisp-polycall.asd (npm distribution: package.json).
+[tool.polycall.binding]
+name = "lisp-polycall"
+language = "Common Lisp"
+native_manifest = "lisp-polycall.asd"
+registry = "npm"
+package = "@obinexusltd/lisp-polycall"
+abi = 1
+support = "supported"
+linux_image = "debian:13 (sbcl cl-cffi gcc; core via build-linux-core.sh)"
+build = "sbcl --non-interactive --eval '(require :asdf)' --eval '(asdf:load-asd (truename \"lisp-polycall.asd\"))' --eval '(asdf:load-system \"lisp-polycall\")'"
+test = "sh tests/run-real-core.sh"
+windows_test = ""
