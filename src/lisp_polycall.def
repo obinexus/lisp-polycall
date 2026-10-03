@@ -1,3 +1,0 @@
-LIBRARY "lisp_polycall"
-EXPORTS
-    lisp_polycall_run_config

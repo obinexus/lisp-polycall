@@ -1,8 +1,10 @@
-# lisp-polycallrc - read-only Lisp runtime overrides for libpolycall
+# lisp-polycallrc - Common Lisp runtime overrides for libpolycall
 #
-# This file uses the SHARED polycall schema (src/config/polycall_config_schema.c).
-# It introduces no new keys or parser: the Lisp adapter passes this path to
-# the core via the FFI boundary. Values here override polycallrc for Lisp.
+# Grammar: the core's legacy key=value configuration grammar, exactly as
+# `polycall config validate lisp-polycallrc` and polycall_ffi_run_config()
+# read it (see polycall docs/BINDING_ABI.md). This binding introduces no keys
+# and no parser of its own: LISP-POLYCALL:RUN-CONFIG passes this path to the
+# core. Strict validation (run=1) rejects unknown keys and tls_enabled=true.
 
 log_level=info
 max_connections=1000
